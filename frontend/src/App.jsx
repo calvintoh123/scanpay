@@ -1,27 +1,38 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import Home from "./pages/Home.jsx";
 import Pay from "./pages/Pay.jsx";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Wallet from "./pages/Wallet.jsx";
-import { logout, getAccessToken } from "./auth";
+import Reload from "./pages/Reload.jsx";
+import DeviceWatch from "./pages/DeviceWatch.jsx";
+import { logout, getAccessToken, onAuthChange } from "./auth";
 
 export default function App() {
-  const authed = !!getAccessToken();
+  const [authed, setAuthed] = useState(!!getAccessToken());
+
+  useEffect(() => {
+    const sync = () => setAuthed(!!getAccessToken());
+    sync();
+    const offAuth = onAuthChange(sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      offAuth();
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
 
   return (
     <BrowserRouter>
       <div className="nav">
-        <Link to="/">Home</Link>
-        <Link to="/wallet">Wallet</Link>
         {!authed ? (
           <>
+            <Link to="/wallet">Wallet</Link>
             <Link to="/login">Login</Link>
-            <Link to="/register">Register</Link>
           </>
         ) : (
-          <button className="linkBtn" onClick={() => { logout(); location.href="/"; }}>
+          <button className="linkBtn" onClick={() => { logout(); }}>
             Logout
           </button>
         )}
@@ -32,6 +43,8 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/pay/:publicId" element={<Pay />} />
           <Route path="/wallet" element={<Wallet />} />
+          <Route path="/wallet/reload" element={<Reload />} />
+          <Route path="/device" element={<DeviceWatch />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
         </Routes>

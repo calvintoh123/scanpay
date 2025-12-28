@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { api } from "../api";
 import { setAccessToken } from "../auth";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 export default function Login() {
   const nav = useNavigate();
+  const [sp] = useSearchParams();
   const [username,setUsername]=useState("");
   const [password,setPassword]=useState("");
   const [msg,setMsg]=useState("");
@@ -14,7 +15,9 @@ export default function Login() {
     try {
       const r = await api.post("/auth/login/", { username, password });
       setAccessToken(r.data.access);
-      nav("/wallet");
+      const nextRaw = sp.get("next");
+      const next = nextRaw && nextRaw.startsWith("/") ? nextRaw : "/wallet";
+      nav(next);
     } catch (e) {
       setMsg(JSON.stringify(e?.response?.data || "Login failed"));
     }

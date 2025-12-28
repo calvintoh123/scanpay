@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api";
-import ReloadPanel from "../components/ReloadPanel.jsx";
+import ReloadStart from "../components/ReloadStart.jsx";
 import { getAccessToken } from "../auth";
 import { Link } from "react-router-dom";
 
@@ -42,7 +42,7 @@ export default function Wallet() {
         </div>
       )}
 
-      <ReloadPanel onReloaded={load} />
+      <ReloadStart />
 
       {data && (
         <div className="card">

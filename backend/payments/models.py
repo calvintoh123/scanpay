@@ -70,7 +70,7 @@ class PaymentTransaction(models.Model):
 class Device(models.Model):
     """
     A simple device registry.
-    device_id is public-ish; secret is required for polling/acking.
+    device_id is public-ish; secret exists but is not required for polling/acking.
     """
     device_id = models.CharField(max_length=64, unique=True)
     secret = models.CharField(max_length=64, editable=False)

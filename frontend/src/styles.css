@@ -17,6 +17,12 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .error { margin-top: 10px; color: #ffb0b0; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
 
-.table { display: grid; gap: 6px; margin-top: 10px; }
-.thead, .trow { display: grid; grid-template-columns: 100px 120px 1fr 220px; gap: 8px; }
+.table { display: grid; gap: 6px; margin-top: 10px; width: 100%; }
+.thead, .trow {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.2fr) minmax(0, 1.4fr);
+  gap: 8px;
+}
+.thead > div, .trow > div { min-width: 0; }
+.table .mono { word-break: normal; overflow-wrap: anywhere; }
 .thead { color: #a0a0a0; font-weight: 600; }

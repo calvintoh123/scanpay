@@ -66,8 +66,8 @@ class GuestPaySerializer(serializers.Serializer):
     guest_name = serializers.CharField(required=False, allow_blank=True)
 
 class DeviceNextSerializer(serializers.Serializer):
-    secret = serializers.CharField()
+    secret = serializers.CharField(required=False, allow_blank=True)
 
 class DeviceAckSerializer(serializers.Serializer):
-    secret = serializers.CharField()
+    secret = serializers.CharField(required=False, allow_blank=True)
     command_id = serializers.IntegerField()

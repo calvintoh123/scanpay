@@ -1,13 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams, Link } from "react-router-dom";
+import { useParams, useSearchParams, useLocation, Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { getAccessToken } from "../auth";
-import ReloadPanel from "../components/ReloadPanel.jsx";
+import ReloadStart from "../components/ReloadStart.jsx";
 
 export default function Pay() {
   const { publicId } = useParams();
   const [sp] = useSearchParams();
   const token = sp.get("t") || "";
+  const location = useLocation();
+  const nav = useNavigate();
+  const returnTo = `${location.pathname}${location.search}`;
+  const nextParam = encodeURIComponent(returnTo);
 
   const [inv, setInv] = useState(null);
   const [wallet, setWallet] = useState(null);
@@ -53,15 +57,14 @@ export default function Pay() {
     }
   }
 
-  async function guestPay() {
-    setMsg("");
-    try {
-      const r = await api.post("/pay/guest/", { invoice_public_id: publicId });
-      setMsg(`Paid as Guest! Receipt: ${r.data.paid_reference}`);
-      await loadInvoice();
-    } catch (e) {
-      setMsg(e?.response?.data?.detail || "Guest pay failed");
-    }
+  function startGuestPay() {
+    const params = new URLSearchParams({
+      amount: inv?.amount || "",
+      mode: "guest",
+      invoice: publicId,
+      return: returnTo,
+    });
+    nav(`/wallet/reload?${params.toString()}`);
   }
 
   if (!inv) {
@@ -93,7 +96,7 @@ export default function Pay() {
 
       {inv.status !== "PENDING" ? (
         <div className="card">
-          <div className="hint">This invoice is not payable anymore.</div>
+          <div className="hint">Payment already done.</div>
         </div>
       ) : (
         <>
@@ -102,7 +105,7 @@ export default function Pay() {
 
             {!authed ? (
               <div className="hint">
-                <Link to="/login">Login</Link> to use wallet + reload.
+                <Link to={`/login?next=${nextParam}`}>Login</Link> to use wallet + reload.
               </div>
             ) : (
               <>
@@ -111,8 +114,7 @@ export default function Pay() {
                   <div className="hint">Insufficient balance. Reload below then pay.</div>
                 )}
 
-                {/* Reload feature on pay page (your requirement) */}
-                <ReloadPanel onReloaded={loadWallet} />
+                <ReloadStart returnTo={returnTo} />
 
                 <button disabled={!canWalletPay} onClick={payWithWallet}>
                   Pay RM{inv.amount} with Wallet
@@ -123,7 +125,7 @@ export default function Pay() {
 
           <div className="card">
             <h3>Pay as Guest (Simulated)</h3>
-            <button onClick={guestPay}>Guest Pay RM{inv.amount}</button>
+            <button onClick={startGuestPay}>Guest Pay RM{inv.amount}</button>
           </div>
         </>
       )}

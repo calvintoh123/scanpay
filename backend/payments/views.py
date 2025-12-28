@@ -254,7 +254,7 @@ class GuestPayView(APIView):
 class DeviceNextCommandView(APIView):
     """
     Device polls:
-      GET /api/device/<device_id>/next/?secret=...
+      GET /api/device/<device_id>/next/
     returns:
       { "has_command": true/false, "command_id": int, "action": 0/1, "duration_sec": int }
     """
@@ -267,7 +267,7 @@ class DeviceNextCommandView(APIView):
         except Device.DoesNotExist:
             return Response({"detail":"Unknown device."}, status=404)
 
-        if not dev.is_active or dev.secret != s.validated_data["secret"]:
+        if not dev.is_active:
             return Response({"detail":"Unauthorized."}, status=401)
 
         dev.last_seen = timezone.now()
@@ -289,11 +289,99 @@ class DeviceNextCommandView(APIView):
             "duration_sec": int(cmd.duration_sec),
         })
 
+class DeviceLatestInvoiceView(APIView):
+    """
+    Device fetches latest invoice for its device_id:
+      GET /api/device/<device_id>/latest-invoice/?only_pending=1
+    returns:
+      { "has_invoice": true/false, "invoice": {...}, "pay_url": "...", "token": "..." }
+    """
+    def get(self, request, device_id: str):
+        try:
+            dev = Device.objects.get(device_id=device_id)
+        except Device.DoesNotExist:
+            return Response({"detail":"Unknown device."}, status=404)
+
+        if not dev.is_active:
+            return Response({"detail":"Unauthorized."}, status=401)
+
+        dev.last_seen = timezone.now()
+        dev.save(update_fields=["last_seen"])
+
+        only_pending = request.query_params.get("only_pending", "").lower() in ("1", "true", "yes")
+        qs = Invoice.objects.filter(device_id=device_id)
+        if only_pending:
+            qs = qs.filter(status=Invoice.PENDING)
+
+        inv = qs.order_by("-created_at").first()
+        if not inv:
+            return Response({"has_invoice": False})
+
+        if inv.status == Invoice.PENDING and inv.is_expired():
+            inv.status = Invoice.EXPIRED
+            inv.save(update_fields=["status"])
+            if only_pending:
+                return Response({"has_invoice": False})
+
+        token = sign_invoice_token(inv.public_id, exp_seconds=900)
+        pay_url = f"/pay/{inv.public_id}?t={token}"
+
+        return Response({
+            "has_invoice": True,
+            "invoice": InvoicePublicSerializer(inv).data,
+            "pay_url": pay_url,
+            "token": token,
+        })
+
+class DeviceRequestInvoiceView(APIView):
+    """
+    Device requests a new invoice for itself:
+      POST /api/device/<device_id>/request-invoice/
+      { "amount": "5.00", "description": "...", "duration_sec": 240 }
+    returns:
+      { "public_id": "...", "pay_url": "...", "token": "..." }
+    """
+    def post(self, request, device_id: str):
+        try:
+            dev = Device.objects.get(device_id=device_id)
+        except Device.DoesNotExist:
+            dev = _ensure_device(device_id)
+
+        if not dev.is_active:
+            return Response({"detail":"Unauthorized."}, status=401)
+
+        payload = dict(request.data or {})
+        payload["device_id"] = device_id
+        s = CreateInvoiceSerializer(data=payload)
+        s.is_valid(raise_exception=True)
+
+        inv = Invoice.objects.create(
+            amount=s.validated_data["amount"],
+            description=s.validated_data.get("description",""),
+            device_id=device_id,
+            duration_sec=s.validated_data["duration_sec"],
+            expires_at=timezone.now() + timezone.timedelta(minutes=15),
+        )
+
+        token = sign_invoice_token(inv.public_id, exp_seconds=900)
+        pay_url = f"/pay/{inv.public_id}?t={token}"
+
+        return Response({
+            "public_id": inv.public_id,
+            "amount": str(inv.amount),
+            "status": inv.status,
+            "device_id": inv.device_id,
+            "duration_sec": inv.duration_sec,
+            "expires_at": inv.expires_at,
+            "pay_url": pay_url,
+            "token": token,
+        }, status=201)
+
 class DeviceAckCommandView(APIView):
     """
     Device ACK:
       POST /api/device/<device_id>/ack/
-      { "secret": "...", "command_id": 123 }
+      { "command_id": 123 }
     """
     @transaction.atomic
     def post(self, request, device_id: str):
@@ -305,7 +393,7 @@ class DeviceAckCommandView(APIView):
         except Device.DoesNotExist:
             return Response({"detail":"Unknown device."}, status=404)
 
-        if not dev.is_active or dev.secret != s.validated_data["secret"]:
+        if not dev.is_active:
             return Response({"detail":"Unauthorized."}, status=401)
 
         cmd = DeviceCommand.objects.select_for_update().filter(
