@@ -11,29 +11,35 @@ A simple scan-to-pay demo:
 
 ## Install (macOS)
 ```bash
-git clone
+Download the repository
+Open the folder with VSCode/Terminal
 cd scanpay
+Delete the venv folder
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 cd frontend
 npm install
 cd ../backend
-python manage.py migrate
+python3 manage.py makemigrations payments
+python3 manage.py migrate
 cd ..
 ```
 
 ## Install (Windows)
 ```bat
-git clone <your-repo-url>
+Download the repository
+Open the folder with VSCode/Command Prompt
 cd scanpay
-py -m venv venv
+Delete the venv folder
+python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
 cd frontend
 npm install
 cd ..\backend
-python manage.py migrate
+python3 manage.py makemigrations payments
+python3 manage.py migrate
 cd ..
 ```
 
