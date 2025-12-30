@@ -9,6 +9,10 @@ A simple scan-to-pay demo:
 - Python 3.9+ (3.10+ ok)
 - Node.js + npm (Node 18+ recommended)
 
+## Deployment
+Follow Install + Run (dev) for first time only
+The rest follow Run (dev) 
+
 ## Install (macOS)
 ```bash
 Download the repository
