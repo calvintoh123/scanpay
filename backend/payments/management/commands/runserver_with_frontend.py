@@ -29,6 +29,11 @@ class Command(RunserverCommand):
         vite_port = str(options["vite_port"])
         vite_host = options["vite_host"]
 
+        use_reloader = options.get("use_reloader")
+        if use_reloader and os.environ.get("RUN_MAIN") != "true":
+            # Avoid starting Vite in the autoreloader parent process.
+            return super().handle(*args, **options)
+
         env = os.environ.copy()
         env["BROWSER"] = "none"
         if "VITE_PUBLIC_BASE_URL" not in env:
