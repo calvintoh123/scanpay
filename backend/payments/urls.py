@@ -3,7 +3,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import (
     RegisterView, CreateInvoiceView, InvoicePublicView, InvoiceStatusView,
     WalletMeView, WalletTopupView, WalletPayView, GuestPayView,
-    DeviceNextCommandView, DeviceLatestInvoiceView, DeviceRequestInvoiceView, DeviceAckCommandView
+    DeviceNextCommandView, DeviceLatestInvoiceView, DeviceRequestInvoiceView, DeviceAckCommandView,
+    DeviceListCreateView, DeviceDeleteView
 )
 
 urlpatterns = [
@@ -26,6 +27,8 @@ urlpatterns = [
     path("pay/guest/", GuestPayView.as_view()),
 
     # Device
+    path("devices/", DeviceListCreateView.as_view()),
+    path("devices/<str:device_id>/", DeviceDeleteView.as_view()),
     path("device/<str:device_id>/next/", DeviceNextCommandView.as_view()),
     path("device/<str:device_id>/latest-invoice/", DeviceLatestInvoiceView.as_view()),
     path("device/<str:device_id>/request-invoice/", DeviceRequestInvoiceView.as_view()),

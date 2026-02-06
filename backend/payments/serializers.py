@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from decimal import Decimal
-from .models import Wallet, WalletTransaction, Invoice
+from .models import Wallet, WalletTransaction, Invoice, Device
 
 class RegisterSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -71,3 +71,8 @@ class DeviceNextSerializer(serializers.Serializer):
 class DeviceAckSerializer(serializers.Serializer):
     secret = serializers.CharField(required=False, allow_blank=True)
     command_id = serializers.IntegerField()
+
+class DeviceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Device
+        fields = ["device_id", "is_active", "last_seen"]

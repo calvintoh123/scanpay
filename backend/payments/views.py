@@ -12,7 +12,8 @@ from .serializers import (
     RegisterSerializer, InvoicePublicSerializer, CreateInvoiceSerializer,
     WalletTransactionSerializer, TopupSerializer,
     WalletPaySerializer, GuestPaySerializer,
-    DeviceNextSerializer, DeviceAckSerializer
+    DeviceNextSerializer, DeviceAckSerializer,
+    DeviceSerializer
 )
 from .tokens import sign_invoice_token, verify_invoice_token
 
@@ -81,10 +82,18 @@ class CreateInvoiceView(APIView):
         s = CreateInvoiceSerializer(data=request.data)
         s.is_valid(raise_exception=True)
 
+        device_id = s.validated_data["device_id"]
+        try:
+            dev = Device.objects.get(device_id=device_id)
+        except Device.DoesNotExist:
+            return Response({"detail":"Unknown device."}, status=400)
+        if not dev.is_active:
+            return Response({"detail":"Device inactive."}, status=400)
+
         inv = Invoice.objects.create(
             amount=s.validated_data["amount"],
             description=s.validated_data.get("description",""),
-            device_id=s.validated_data["device_id"],
+            device_id=device_id,
             duration_sec=s.validated_data["duration_sec"],
             expires_at=timezone.now() + timezone.timedelta(minutes=15),
         )
@@ -408,4 +417,35 @@ class DeviceAckCommandView(APIView):
         cmd.acked_at = timezone.now()
         cmd.save(update_fields=["state","acked_at"])
 
+        return Response({"ok": True})
+
+class DeviceListCreateView(APIView):
+    """
+    Manage saved devices:
+      GET /api/devices/
+      POST /api/devices/ { "device_id": "DEV001" }
+    """
+    def get(self, request):
+        devices = Device.objects.order_by("device_id")
+        return Response(DeviceSerializer(devices, many=True).data)
+
+    def post(self, request):
+        device_id = (request.data.get("device_id") or "").strip()
+        if not device_id:
+            return Response({"detail":"device_id is required."}, status=400)
+        if Device.objects.filter(device_id=device_id).exists():
+            return Response({"detail":"Device already exists."}, status=400)
+        dev = Device.objects.create(device_id=device_id)
+        return Response(DeviceSerializer(dev).data, status=201)
+
+class DeviceDeleteView(APIView):
+    """
+    DELETE /api/devices/<device_id>/
+    """
+    def delete(self, request, device_id: str):
+        try:
+            dev = Device.objects.get(device_id=device_id)
+        except Device.DoesNotExist:
+            return Response({"detail":"Not found."}, status=404)
+        dev.delete()
         return Response({"ok": True})

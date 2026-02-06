@@ -1,15 +1,18 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { api } from "../api";
 import { QRCodeCanvas } from "qrcode.react";
 import { getAccessToken } from "../auth";
+import { Link } from "react-router-dom";
 
 export default function Home() {
   const [amount, setAmount] = useState("5.00");
   const [desc, setDesc] = useState("Sim payment");
-  const [deviceId, setDeviceId] = useState("DEV001");
+  const [deviceId, setDeviceId] = useState("");
+  const [devices, setDevices] = useState([]);
   const [duration, setDuration] = useState("240");
   const [result, setResult] = useState(null);
   const [err, setErr] = useState("");
+  const [deviceErr, setDeviceErr] = useState("");
   const [payMsg, setPayMsg] = useState("");
   const [payBusy, setPayBusy] = useState(false);
   const baseUrl = (import.meta.env.VITE_PUBLIC_BASE_URL || window.location.origin)
@@ -17,8 +20,33 @@ export default function Home() {
   const payUrl = result ? `${baseUrl}${result.pay_url}` : "";
   const authed = !!getAccessToken();
 
+  async function loadDevices() {
+    setDeviceErr("");
+    try {
+      const r = await api.get("/devices/");
+      const list = r.data || [];
+      setDevices(list);
+      if (!list.length) {
+        setDeviceId("");
+      } else if (!list.find((d) => d.device_id === deviceId)) {
+        setDeviceId(list[0].device_id);
+      }
+    } catch (e) {
+      setDevices([]);
+      setDeviceErr(e?.response?.data?.detail || "Failed to load devices.");
+    }
+  }
+
+  useEffect(() => {
+    loadDevices();
+  }, []);
+
   async function createInvoice() {
     setErr(""); setResult(null); setPayMsg(""); setPayBusy(false);
+    if (!deviceId) {
+      setErr("Please select a device.");
+      return;
+    }
     try {
       const r = await api.post("/invoices/", {
         amount,
@@ -58,10 +86,22 @@ export default function Home() {
         </div>
 
         <div className="row">
-          <input value={deviceId} onChange={(e)=>setDeviceId(e.target.value)} placeholder="Device ID (e.g. DEV001)" />
+          <select value={deviceId} onChange={(e)=>setDeviceId(e.target.value)}>
+            {devices.length === 0 && <option value="">No devices</option>}
+            {devices.map((d) => (
+              <option key={d.device_id} value={d.device_id}>
+                {d.device_id}
+              </option>
+            ))}
+          </select>
           <input value={duration} onChange={(e)=>setDuration(e.target.value)} placeholder="Duration seconds" />
-          <button onClick={createInvoice}>Create Invoice</button>
+          <button onClick={createInvoice} disabled={!deviceId}>Create Invoice</button>
+          <button onClick={loadDevices}>Refresh Devices</button>
         </div>
+        <div className="hint muted">
+          Manage devices in <Link to="/devices">Saved Devices</Link>.
+        </div>
+        {deviceErr && <div className="error">{deviceErr}</div>}
 
         {err && <div className="error">{err}</div>}
 

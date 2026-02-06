@@ -7,6 +7,7 @@ import Register from "./pages/Register.jsx";
 import Wallet from "./pages/Wallet.jsx";
 import Reload from "./pages/Reload.jsx";
 import DeviceWatch from "./pages/DeviceWatch.jsx";
+import SavedDevices from "./pages/SavedDevices.jsx";
 import { logout, getAccessToken, onAuthChange } from "./auth";
 
 export default function App() {
@@ -26,6 +27,10 @@ export default function App() {
   return (
     <BrowserRouter>
       <div className="nav">
+        <Link to="/">Home</Link>
+        <Link to="/device">Device Monitor</Link>
+        <Link to="/devices">Saved Devices</Link>
+        <div className="navSpacer" />
         {!authed ? (
           <>
             <Link to="/wallet">Wallet</Link>
@@ -45,6 +50,7 @@ export default function App() {
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/wallet/reload" element={<Reload />} />
           <Route path="/device" element={<DeviceWatch />} />
+          <Route path="/devices" element={<SavedDevices />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
         </Routes>
